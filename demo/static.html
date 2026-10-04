@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Static page: Mermaid + MermaidKiwi</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}pre.mermaid{overflow:auto}
+#log{background:#f5f5f4;padding:.5rem;font-size:12px;white-space:pre-wrap}</style>
+</head>
+<body>
+<h1>Static HTML, same flow as Mermaid</h1>
+<p>A plain Mermaid fence (drawn by Mermaid itself):</p>
+<pre class="mermaid">
+flowchart LR
+  A --> B --> C
+</pre>
+<p>A constrained one (drawn by MermaidKiwi because it contains <code>%% constrain:</code> lines). Drag it; the new source appears below:</p>
+<pre class="mermaid">
+flowchart TB
+  customer["Customer<br/>[Person]<br/>Uses the bank"]:::person
+  subgraph bank["Internet Banking [Software System]"]
+    web["Web App<br/>[Container: Java]<br/>Serves the SPA"]:::container
+    db[("Database<br/>[Container: Oracle]<br/>Accounts")]:::db
+  end
+  customer -.->|"Visits<br/>[HTTPS]"| web
+  web -.->|"Reads<br/>[JDBC]"| db
+  %% constrain: align-x customer web db
+</pre>
+<pre id="log">(drag a shape to see the write-back payload)</pre>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js"></script>
+<script src="../dist/mermaid-kiwi.iife.min.js"></script>
+<script>
+mermaid.initialize({ startOnLoad: false });
+MermaidKiwi.run({ mermaid, editable: true, onChange: c => { document.getElementById('log').textContent = JSON.stringify({ baseHash: c.baseHash, pins: c.pins }, null, 1) + '\n\n' + c.source; } });
+</script>
+</body>
+</html>

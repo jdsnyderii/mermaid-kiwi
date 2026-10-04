@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>View fences (no Mermaid)</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:60rem;margin:2rem auto;padding:0 1rem}pre.view{overflow:auto}
+#log{background:#f5f5f4;padding:.5rem;font-size:12px;white-space:pre-wrap}
+@media print{#log{display:none}}</style>
+</head>
+<body>
+<h1>View fences</h1>
+<p>Two views over one model file. No Mermaid script is loaded; drag a shape and the payload to save appears below.</p>
+<h2>Containers</h2>
+<pre class="view" data-name="bank-containers">
+model model.dsl
+of bank
+expand api
+dir TB
+style tag:database fill=#2b6e44
+above customer bank gap=70
+</pre>
+<h2>System context</h2>
+<pre class="view" data-name="bank-context">
+model model.dsl
+dir LR
+style tag:external fill=#8a8a8a shape=hexagon
+</pre>
+<pre id="log">(drag a shape)</pre>
+<script type="text/plain" id="model">
+customer = person "Customer" "A customer of the bank"
+email = softwareSystem "E-mail System" "Exchange" "External"
+bank = softwareSystem "Internet Banking" "Online banking" {
+  web = container "Web App" "Serves the SPA" "Java"
+  api = container "API" "JSON API" "Java" {
+    sec = component "Security" "Auth" "Bean"
+    acc = component "Accounts" "Balances" "Bean"
+  }
+  db = container "Database" "Accounts" "Oracle" "Database"
+}
+customer -> web "Visits" "HTTPS"
+web -> sec "Calls" "JSON"
+sec -> acc "Authorises"
+acc -> db "Reads" "JDBC"
+sec -> email "Sends" "SMTP"
+</script>
+<script src="../dist/mermaid-kiwi.iife.min.js"></script>
+<script>
+// In a real viewer, omit `models` and the default loader fetches the "model <path>" file from the server.
+MermaidKiwi.run({ models: { 'model.dsl': document.getElementById('model').textContent }, editable: true,
+  onChange: c => { document.getElementById('log').textContent = JSON.stringify({ view: c.name, baseHash: c.baseHash, layout: c.layout }, null, 1); } });
+</script>
+</body>
+</html>

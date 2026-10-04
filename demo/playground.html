@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MermaidKiwi playground</title>
+<style>
+:root{--bg:#fafaf9;--fg:#1c1917;--mut:#78716c;--card:#fff;--bd:#d6d3d1;--err:#b91c1c;--btn:#1168bd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1917;--fg:#fafaf9;--mut:#a8a29e;--card:#292524;--bd:#44403c;--err:#fca5a5}}
+:root[data-theme="dark"]{--bg:#1c1917;--fg:#fafaf9;--mut:#a8a29e;--card:#292524;--bd:#44403c;--err:#fca5a5}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:14px}
+h1{font-size:18px;margin:0 0 4px}p{color:var(--mut);margin:0 0 10px;font-size:13px}
+textarea{width:100%;box-sizing:border-box;height:230px;font:11.5px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px}
+button{margin:8px 8px 8px 0;padding:8px 14px;border:0;border-radius:8px;background:var(--btn);color:#fff;font-weight:600;font-size:14px}
+button.s{background:var(--card);color:var(--fg);border:1px solid var(--bd)}
+#msg{color:var(--err);font-size:12px;white-space:pre-wrap;min-height:16px}
+#out{overflow:auto;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:6px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+select{font-size:13px;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--fg);max-width:100%}
+#dsl{height:210px}details{margin:6px 0;font-size:13px;color:var(--mut)}
+
+:root{--mk-bg:var(--card);--mk-fg:var(--fg);--mk-mut:var(--mut)}
+</style>
+</head>
+<body>
+<h1>MermaidKiwi playground</h1>
+<p>Built on the module bundle. Drag a shape or a boundary title; the position is written back into the Mermaid source as a pin.</p>
+<textarea id="dsl" spellcheck="false">workspace {
+  model {
+    customer = person "Personal Customer" "A customer of the bank"
+    email = softwareSystem "E-mail System" "Microsoft Exchange" "External"
+    mainframe = softwareSystem "Mainframe Banking" "Core accounts" "External"
+    bank = softwareSystem "Internet Banking System" "Lets customers view accounts" {
+      web = container "Web Application" "Delivers the SPA" "Java, Spring MVC"
+      spa = container "Single-Page App" "Banking UI" "JavaScript, Angular"
+      api = container "API Application" "JSON/HTTPS API" "Java" {
+        sec = component "Security Component" "Sign-in, resets" "Spring Bean"
+        acc = component "Accounts Summary" "Balances" "Spring Bean"
+      }
+      db = container "Database" "Accounts, audit logs" "Oracle" "Database"
+    }
+    customer -> web "Visits" "HTTPS"
+    customer -> spa "Views balances" "HTTPS"
+    web -> spa "Delivers"
+    spa -> sec "Calls" "JSON/HTTPS"
+    sec -> acc "Authorises"
+    acc -> db "Reads from" "JDBC"
+    acc -> mainframe "Gets data" "XML/HTTPS"
+    sec -> email "Sends e-mail" "SMTP"
+    email -> customer "Sends e-mail to"
+  }
+  views { }
+}
+</textarea>
+<div class="row"><select id="view"></select><select id="dir"><option>TB</option><option>LR</option></select><select id="rt"><option value="o">Routed edges</option><option value="s">Straight edges</option></select>
+<label>Spacing <input id="sp" type="range" min="0.6" max="2.5" step="0.1" value="1"></label><button id="tr">Translate</button></div>
+<details><summary>Generated Mermaid (editable; holds constraints and pins)</summary><textarea id="src" spellcheck="false"></textarea></details>
+<button id="go">Render Mermaid</button><button class="s" id="clr">Clear pins</button>
+<div id="msg"></div>
+<div id="out"></div>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js"></script>
+<script src="../dist/mermaid-kiwi.iife.min.js"></script>
+<script>
+const $ = id => document.getElementById(id), K = MermaidKiwi; let h = null;
+mermaid.initialize({ startOnLoad: false });
+async function show(src) {
+  if (h) h.destroy();
+  try {
+    h = await K.mount($('out'), src, { mermaid, editable: true, spacing: +$('sp').value, route: $('rt').value === 'o',
+      onChange: ({ source }) => { $('src').value = source; }, onWarnings: w => { $('msg').textContent = w.join('\n'); } });
+  } catch (e) { $('msg').textContent = String(e.message || e); }
+}
+function translate(dropPins) {
+  const sel = $('view'), r = K.dslToMermaid($('dsl').value, { view: sel.selectedOptions[0] && sel.selectedOptions[0].text, dir: $('dir').value });
+  sel.innerHTML = r.views.map((v, i) => `<option value="${i}">${v}</option>`).join(''); sel.value = r.index;
+  const prev = dropPins ? K.serializeConstraints($('src').value, {}) : $('src').value;
+  const keep = prev.split('\n').filter(l => /^\s*%\s*(constrain:|@layout)/i.test(l));
+  $('src').value = r.mermaid + '\n' + keep.join('\n') + '\n'; show($('src').value); $('msg').textContent = r.warnings.join('\n');
+}
+$('tr').onclick = () => translate(false); $('view').onchange = () => translate(true); $('dir').onchange = () => translate(false);
+$('go').onclick = () => show($('src').value); $('rt').onchange = () => show($('src').value);
+$('clr').onclick = () => { $('src').value = K.serializeConstraints($('src').value, {}); show($('src').value); };
+$('sp').onchange = () => { $('src').value = K.serializeConstraints($('src').value, {}); show($('src').value); };   // new spacing = fresh layout, so pins are dropped
+translate(false);
+</script>
+</body>
+</html>
