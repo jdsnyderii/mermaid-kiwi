@@ -52,6 +52,7 @@ Graph items: leaf `{id, lines, style, w, h, parent?}`, boundary `{id, box:true, 
 7. **Escape everything that reaches SVG.** Text via `esc`, attribute values (including user `style` values) via `at`. The `<pre>` source is HTML-escaped by the server and read back with `textContent`.
 8. **SVG is self-contained**: embedded `<style>`, CSS variables with fallbacks (`--mk-bg/--mk-fg/--mk-mut`), `theme: auto|light|dark`. It must work inline, in `<img>`, and saved to disk.
 9. **Output is deterministic** for the same input and versions.
+10a. **Arrowheads never sit on a bend.** `route.js` makes every edge leave and enter its shape along a straight lead-in (24px source / 32px target, shrinking to 10px when shapes are close), reserves those lanes for the edge, and tries other sides before falling back to a straight line. `test/headless.mjs` asserts the final segment is axis-aligned and at least 10px.
 10. **Dragging uses straight edges** (fast); routing runs on drop and on load. Changing spacing re-runs ELK and drops pins.
 11. **Constraints.** Defaults: user constraints `strong`, ELK stay-put `medium`, boundary shrink `weak`, containment and minimum title width `required`. Kiwi cannot express "no overlap"; `solveLayout` only warns about overlaps. Unknown ids and ops are warnings, not exceptions.
 

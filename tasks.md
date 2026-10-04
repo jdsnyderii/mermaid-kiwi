@@ -3,9 +3,11 @@
 Status key: [ ] open, [~] partly done. Nothing below has been verified in a real browser unless stated.
 
 ## Needs verifying first
-- [ ] Open `demo/static.html`, `demo/views.html`, `demo/playground.html` in a real browser (desktop and phone). Only the Node/jsdom tests have run. Drag, pointer capture on touch, and `getScreenCTM` conversion are untested.
+- [ ] Open `demo/playground.html` (also published standalone), `demo/static.html`, `demo/views.html`, `demo/playground.html` in a real browser (desktop and phone). Only the Node/jsdom tests have run. Drag, pointer capture on touch, and `getScreenCTM` conversion are untested.
 - [ ] Add a headless test that loads the IIFE bundle (`dist/mermaid-kiwi.iife.min.js`); tests currently cover core and esm only.
 - [ ] Confirm the CDN-free setup: vendor `mermaid.min.js` (11.15.0) into the Docker image and serve it as a static asset.
+
+- [ ] Playground's "compare with plain Mermaid" toggle failed under jsdom (no `getBBox`); confirm it works in a real browser. Print via Ctrl/Cmd+P is wired (light palette swap on `beforeprint`) but untested.
 
 ## Viewer integration (Python / Docker)
 - [ ] Write-back endpoint. Contract is in `README.md`. Framework still undecided (FastAPI/Flask/Starlette/stdlib).
@@ -35,6 +37,7 @@ Status key: [ ] open, [~] partly done. Nothing below has been verified in a real
 
 ## Rendering and routing
 - [ ] Print: `@media print` forces the light palette, scales SVG to page width, `break-inside: avoid`. Not tested in a browser.
+- [~] Arrowheads on bends: edges now leave and enter every shape along a straight lead-in (24/32px, shrinking to 10px when shapes are close), the router tries other sides when a lead is blocked, and lead lanes are reserved. Still open: where shapes are only ~20px apart (e.g. stacked containers) the lead is short, and in the Components view the Security shape gets a small loop where two edges share a crowded side (no per-side port reservation across edges yet).
 - [ ] Parallel edges between the same pair draw on top of each other; label collisions.
 - [ ] Edges can cross boundary titles; boundaries are transparent to the router.
 - [ ] Router performance on large graphs (A* is capped at 200k iterations per edge, then falls back to a straight line).

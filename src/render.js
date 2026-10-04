@@ -12,7 +12,8 @@ const css = theme => `.mk{${theme === 'dark' ? DARK : LIGHT}}` + (theme === 'aut
   '.mk-edit [data-id]{cursor:grab;touch-action:none}';
 
 function node(n) {
-  const { px: x, py: y, pw: w, ph: h } = n, k = n.style, cx = x + w / 2, top = y + textTop(k);
+  const { px: x, py: y, pw: w, ph: h } = n, k = n.style, cx = x + w / 2;
+  const top = y + (k.shape === 'diamond' || k.shape === 'circle' ? (h - (n.lines.length * 15 + 20)) / 2 : textTop(k));   // centre text in shapes with no flat top
   const st = `fill="${at(k.fill)}" stroke="${at(k.stroke)}" stroke-width="${at(k['stroke-width'])}"` + (k['stroke-dasharray'] ? ` stroke-dasharray="${at(k['stroke-dasharray'])}"` : '');
   let s = `<g data-id="${at(n.id)}">`;
   switch (k.shape) {
@@ -20,6 +21,7 @@ function node(n) {
     case 'cylinder': s += `<path d="M${x},${y + 8}a${w / 2},8 0 0 1 ${w},0v${h - 16}a${w / 2},8 0 0 1 -${w},0z" ${st}/><path d="M${x},${y + 8}a${w / 2},8 0 0 0 ${w},0" fill="none" stroke="${at(k.stroke)}"/>`; break;
     case 'circle': s += `<ellipse cx="${cx}" cy="${y + h / 2}" rx="${w / 2}" ry="${h / 2}" ${st}/>`; break;
     case 'hexagon': s += `<polygon points="${x + 18},${y} ${x + w - 18},${y} ${x + w},${y + h / 2} ${x + w - 18},${y + h} ${x + 18},${y + h} ${x},${y + h / 2}" ${st}/>`; break;
+    case 'diamond': s += `<polygon points="${cx},${y} ${x + w},${y + h / 2} ${cx},${y + h} ${x},${y + h / 2}" ${st}/>`; break;
     case 'rounded': s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="16" ${st}/>`; break;
     default: s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="5" ${st}/>`;
   }

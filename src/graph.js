@@ -17,7 +17,7 @@ export async function readGraph(src, mermaid, measure = defaultMeasure()) {
     const lines = String(v.text || v.id).split(/<br\s*\/?>/i).map(s => s.replace(/<[^>]+>/g, '').trim());
     const cls = [].concat(v.classes || []).join(' ');
     const kind = { person: /person/.test(cls), ext: /ext/.test(cls), comp: /component/.test(cls), cont: /container/.test(cls), db: /\bdb\b/.test(cls) || v.type === 'cylinder' };
-    const style = kindStyle(kind);
+    const style = kindStyle(kind, v.type);
     items[v.id] = { id: v.id, lines, style, ...nodeSize(lines, style, measure) };
   });
   sgs.forEach(s => { const title = String(s.title || s.id).replace(/<[^>]+>/g, ''); items[s.id] = { id: s.id, box: true, title, style: {}, tw: measure(title, 'bold 12px system-ui,sans-serif') + 28 }; });

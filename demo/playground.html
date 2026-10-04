@@ -5,84 +5,184 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MermaidKiwi playground</title>
 <style>
-:root{--bg:#fafaf9;--fg:#1c1917;--mut:#78716c;--card:#fff;--bd:#d6d3d1;--err:#b91c1c;--btn:#1168bd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1917;--fg:#fafaf9;--mut:#a8a29e;--card:#292524;--bd:#44403c;--err:#fca5a5}}
-:root[data-theme="dark"]{--bg:#1c1917;--fg:#fafaf9;--mut:#a8a29e;--card:#292524;--bd:#44403c;--err:#fca5a5}
+:root{--bg:#fafaf9;--fg:#1c1917;--mut:#78716c;--card:#fff;--bd:#d6d3d1;--acc:#1168bd;--err:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1917;--fg:#fafaf9;--mut:#a8a29e;--card:#292524;--bd:#44403c;--acc:#5aa7ee;--err:#fca5a5}}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:14px}
-h1{font-size:18px;margin:0 0 4px}p{color:var(--mut);margin:0 0 10px;font-size:13px}
-textarea{width:100%;box-sizing:border-box;height:230px;font:11.5px/1.4 ui-monospace,Menlo,Consolas,monospace;background:var(--card);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px}
-button{margin:8px 8px 8px 0;padding:8px 14px;border:0;border-radius:8px;background:var(--btn);color:#fff;font-weight:600;font-size:14px}
-button.s{background:var(--card);color:var(--fg);border:1px solid var(--bd)}
-#msg{color:var(--err);font-size:12px;white-space:pre-wrap;min-height:16px}
-#out{overflow:auto;background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:6px}
-.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;margin:6px 0}
-select{font-size:13px;padding:6px;border-radius:6px;border:1px solid var(--bd);background:var(--card);color:var(--fg);max-width:100%}
-#dsl{height:210px}details{margin:6px 0;font-size:13px;color:var(--mut)}
-
-:root{--mk-bg:var(--card);--mk-fg:var(--fg);--mk-mut:var(--mut)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;padding:14px}
+h1{font-size:19px;margin:0}.sub{color:var(--mut);font-size:13px;margin:2px 0 10px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}.tabs button{flex:1;padding:9px;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:8px;font-weight:600;font-size:14px}
+.tabs button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.grid{display:grid;gap:12px}@media (min-width:900px){.grid{grid-template-columns:minmax(320px,430px) 1fr;align-items:start}}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px}
+textarea{width:100%;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px;resize:vertical}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}.chips button,.row button{padding:6px 11px;border:1px solid var(--bd);background:var(--bg);color:var(--fg);border-radius:999px;font-size:13px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;margin:8px 0}select,input[type=text]{font-size:13px;padding:5px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--fg)}
+.fence{font:12px ui-monospace,Menlo,monospace;color:var(--mut);margin-bottom:4px}.fence input{width:11em;font:12px ui-monospace,Menlo,monospace}
+.try{margin:6px 0 0;padding-left:18px;color:var(--mut);font-size:13px}.try b{color:var(--fg);font-weight:600}
+#msg{color:var(--err);font-size:12px;white-space:pre-wrap;min-height:1em}#stats{color:var(--mut);font-size:12px}
+#out{overflow:auto;min-height:160px;margin-top:6px}details{font-size:13px;color:var(--mut);margin-top:8px}summary{cursor:pointer}pre{white-space:pre-wrap;font-size:11.5px;margin:6px 0 0;color:var(--fg)}
+@media print{body{background:#fff;padding:0}.noprint{display:none!important}.card{border:0;padding:0}#out{overflow:visible}#out svg{max-width:100%!important;height:auto!important;break-inside:avoid}}
 </style>
 </head>
 <body>
+<div class="noprint">
 <h1>MermaidKiwi playground</h1>
-<p>Built on the module bundle. Drag a shape or a boundary title; the position is written back into the Mermaid source as a pin.</p>
-<textarea id="dsl" spellcheck="false">workspace {
-  model {
-    customer = person "Personal Customer" "A customer of the bank"
-    email = softwareSystem "E-mail System" "Microsoft Exchange" "External"
-    mainframe = softwareSystem "Mainframe Banking" "Core accounts" "External"
-    bank = softwareSystem "Internet Banking System" "Lets customers view accounts" {
-      web = container "Web Application" "Delivers the SPA" "Java, Spring MVC"
-      spa = container "Single-Page App" "Banking UI" "JavaScript, Angular"
-      api = container "API Application" "JSON/HTTPS API" "Java" {
-        sec = component "Security Component" "Sign-in, resets" "Spring Bean"
-        acc = component "Accounts Summary" "Balances" "Spring Bean"
-      }
-      db = container "Database" "Accounts, audit logs" "Oracle" "Database"
-    }
-    customer -> web "Visits" "HTTPS"
-    customer -> spa "Views balances" "HTTPS"
-    web -> spa "Delivers"
-    spa -> sec "Calls" "JSON/HTTPS"
-    sec -> acc "Authorises"
-    acc -> db "Reads from" "JDBC"
-    acc -> mainframe "Gets data" "XML/HTTPS"
-    sec -> email "Sends e-mail" "SMTP"
-    email -> customer "Sends e-mail to"
-  }
-  views { }
-}
-</textarea>
-<div class="row"><select id="view"></select><select id="dir"><option>TB</option><option>LR</option></select><select id="rt"><option value="o">Routed edges</option><option value="s">Straight edges</option></select>
-<label>Spacing <input id="sp" type="range" min="0.6" max="2.5" step="0.1" value="1"></label><button id="tr">Translate</button></div>
-<details><summary>Generated Mermaid (editable; holds constraints and pins)</summary><textarea id="src" spellcheck="false"></textarea></details>
-<button id="go">Render Mermaid</button><button class="s" id="clr">Clear pins</button>
-<div id="msg"></div>
-<div id="out"></div>
+<p class="sub">Two features, one engine: Mermaid flowcharts with Kiwi layout constraints, and named view fences over a model file. Everything below is drawn in your browser.</p>
+<div class="tabs"><button id="t-view" class="on">View fence</button><button id="t-mmd">Mermaid fence</button></div>
+</div>
+<div class="grid">
+<div class="noprint">
+ <div class="card" id="p-view">
+  <div class="chips" id="vp"></div>
+  <div class="fence">```view <input type="text" id="vname" value="bank-containers" aria-label="view name"></div>
+  <textarea id="vsrc" rows="10" spellcheck="false"></textarea>
+  <details><summary>Model file (<code>model.dsl</code>, shared by every view)</summary><textarea id="model" rows="14" spellcheck="false"></textarea></details>
+  <ul class="try"><li><b>Drag</b> a shape or a boundary title. A <code>layout</code> block appears in the fence.</li>
+  <li>Change <code>of bank</code> to <code>of api</code>, or add <code>expand api</code>.</li>
+  <li>Add <code>style tag:external shape=hexagon</code> or <code>align-x web db</code>.</li></ul>
+ </div>
+ <div class="card" id="p-mmd" hidden>
+  <div class="chips" id="mp"></div>
+  <textarea id="msrc" rows="14" spellcheck="false"></textarea>
+  <label class="row"><input type="checkbox" id="cmp"> Compare: render the same text with plain Mermaid (constraints ignored)</label>
+  <ul class="try"><li><b>Drag</b> a shape: pins are written as <code>%% constrain: pin</code> lines under <code>%% @layout</code>.</li>
+  <li>Edit the <code>%% constrain:</code> lines. Plain Mermaid treats them as comments.</li></ul>
+ </div>
+ <div class="card" style="margin-top:12px">
+  <div class="row">Spacing <input type="range" id="sp" min="0.6" max="2.5" step="0.1" value="1">
+   <select id="rt"><option value="o">Routed edges</option><option value="s">Straight edges</option></select>
+   <button id="clr">Clear pins</button><button id="rst">Reset</button></div>
+  <details><summary>What a server would receive on drop</summary><pre id="pay">(drag something)</pre></details>
+  <details id="svgd"><summary>Standalone SVG (copy)</summary><textarea id="svgsrc" rows="5" readonly></textarea></details>
+ </div>
+</div>
+<div class="card">
+ <div id="msg"></div><div id="stats"></div>
+ <div id="out"></div>
+ <div class="noprint" style="font-size:12px;color:var(--mut);margin-top:6px">Print with Ctrl/Cmd+P: only the diagram prints, in light colours.</div>
+</div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@11.15.0/dist/mermaid.min.js"></script>
 <script src="../dist/mermaid-kiwi.iife.min.js"></script>
 <script>
-const $ = id => document.getElementById(id), K = MermaidKiwi; let h = null;
-mermaid.initialize({ startOnLoad: false });
-async function show(src) {
-  if (h) h.destroy();
+const $ = id => document.getElementById(id), K = MermaidKiwi, out = $('out');
+if (window.mermaid) mermaid.initialize({ startOnLoad: false });
+const MODEL = `customer = person "Personal Customer" "A customer of the bank"
+email = softwareSystem "E-mail System" "Microsoft Exchange" "External"
+mainframe = softwareSystem "Mainframe Banking" "Core accounts" "External"
+bank = softwareSystem "Internet Banking" "Lets customers view accounts" {
+  web = container "Web Application" "Delivers the SPA" "Java, Spring MVC"
+  spa = container "Single-Page App" "Banking UI" "JavaScript, Angular"
+  api = container "API Application" "JSON/HTTPS API" "Java" {
+    sec = component "Security" "Sign-in, resets" "Spring Bean"
+    acc = component "Accounts Summary" "Balances" "Spring Bean"
+  }
+  db = container "Database" "Accounts, audit logs" "Oracle" "Database"
+}
+customer -> web "Visits" "HTTPS"
+customer -> spa "Views balances" "HTTPS"
+web -> spa "Delivers"
+spa -> sec "Calls" "JSON/HTTPS"
+sec -> acc "Authorises"
+acc -> db "Reads from" "JDBC"
+acc -> mainframe "Gets data" "XML/HTTPS"
+sec -> email "Sends e-mail" "SMTP"
+email -> customer "Sends e-mail to"
+`;
+const VIEWS = {
+  Containers: `model model.dsl
+of bank
+dir TB
+title "Internet Banking: containers"
+style tag:database fill=#2b6e44
+align-y email mainframe
+`,
+  Components: `model model.dsl
+of api            // zoom into the API container
+dir TB
+style tag:database fill=#2b6e44
+`,
+  Context: `model model.dsl
+dir LR
+style tag:external shape=hexagon fill=#8a8a8a
+`,
+  Everything: `model model.dsl
+all               // every element, nested
+dir LR
+`,
+};
+const MMD = {
+  'Align + distribute': `flowchart TB
+  A[Start] --> B{Valid?}
+  B -->|yes| C[Process]
+  B -->|no| D[Reject]
+  C --> E([Done])
+  D --> E
+  F[Audit log] -.-> C
+  %% constrain: align-x A B
+  %% constrain: align-y C D F
+  %% constrain: distribute-x F C D gap=70
+`,
+  'Boundaries + Structurizr look': `flowchart LR
+  user["Customer<br/>[Person]"]:::person
+  subgraph sys["Internet Banking [Software System]"]
+    web["Web App<br/>[Container: Java]"]:::container
+    db[("Database<br/>[Container: Oracle]")]:::db
+  end
+  ext["Mainframe<br/>[Software System]"]:::ext
+  user -.->|"Visits<br/>[HTTPS]"| web
+  web -.->|"Reads<br/>[JDBC]"| db
+  web -.->|"Gets data"| ext
+  %% constrain: align-y user web ext
+`,
+};
+let tab = 'view', h = null, seq = 0, timer = 0, last = { view: 'Containers', mmd: 'Align + distribute' };
+const ta = () => tab === 'view' ? $('vsrc') : $('msrc');
+const strip = t => tab === 'view' ? K.serializeView(t, {}) : K.serializeConstraints(t, {});
+
+async function show() {
+  const my = ++seq; if (h) { h.destroy(); h = null; }
+  $('msg').textContent = ''; $('stats').textContent = '';
   try {
-    h = await K.mount($('out'), src, { mermaid, editable: true, spacing: +$('sp').value, route: $('rt').value === 'o',
-      onChange: ({ source }) => { $('src').value = source; }, onWarnings: w => { $('msg').textContent = w.join('\n'); } });
-  } catch (e) { $('msg').textContent = String(e.message || e); }
+    if (tab === 'mmd' && $('cmp').checked) {
+      if (!window.mermaid) throw Error('Mermaid did not load (only needed for this comparison)');
+      const { svg } = await mermaid.render('mk-cmp' + my, ta().value), el = document.createElement('div'); el.innerHTML = svg;
+      if (my === seq) { out.replaceChildren(el); $('stats').textContent = 'Plain Mermaid: the constraint comments are ignored.'; }
+      return;
+    }
+    const el = document.createElement('div'), kind = tab === 'view' ? 'view' : 'mermaid';
+    const hh = await K.mount(el, ta().value, { kind, mermaid: window.mermaid, models: { 'model.dsl': $('model').value }, editable: true,
+      spacing: +$('sp').value, route: $('rt').value === 'o',
+      onWarnings: w => { if (my === seq) $('msg').textContent = w.join('\n'); },
+      onChange: c => {                                  // this is the write-back: the fence text itself is rewritten
+        ta().value = c.source; stats(c.hash);
+        $('pay').textContent = JSON.stringify(kind === 'view' ? { view: $('vname').value, baseHash: c.baseHash || '(from data-hash)', layout: c.layout } : { baseHash: c.baseHash || '(from data-hash)', pins: c.pins }, null, 1);
+      } });
+    if (my !== seq) { hh.destroy(); return; }
+    h = hh; out.replaceChildren(el); stats(); $('svgsrc').value = h.diagram.svg({ theme: 'light' });
+  } catch (e) { if (my === seq) { $('msg').textContent = String(e.message || e); out.replaceChildren(); } }
 }
-function translate(dropPins) {
-  const sel = $('view'), r = K.dslToMermaid($('dsl').value, { view: sel.selectedOptions[0] && sel.selectedOptions[0].text, dir: $('dir').value });
-  sel.innerHTML = r.views.map((v, i) => `<option value="${i}">${v}</option>`).join(''); sel.value = r.index;
-  const prev = dropPins ? K.serializeConstraints($('src').value, {}) : $('src').value;
-  const keep = prev.split('\n').filter(l => /^\s*%\s*(constrain:|@layout)/i.test(l));
-  $('src').value = r.mermaid + '\n' + keep.join('\n') + '\n'; show($('src').value); $('msg').textContent = r.warnings.join('\n');
+function stats(hash) {
+  if (!h) return; const L = h.diagram.g.list, t = ta().value;
+  $('stats').textContent = `${L.filter(i => !i.box).length} shapes · ${L.filter(i => i.box).length} boundaries · ${h.diagram.g.edges.length} edges · hash ${hash || (tab === 'view' ? K.viewHash(t) : K.contentHash(t))} (ignores the generated layout, so dragging never changes it)`;
 }
-$('tr').onclick = () => translate(false); $('view').onchange = () => translate(true); $('dir').onchange = () => translate(false);
-$('go').onclick = () => show($('src').value); $('rt').onchange = () => show($('src').value);
-$('clr').onclick = () => { $('src').value = K.serializeConstraints($('src').value, {}); show($('src').value); };
-$('sp').onchange = () => { $('src').value = K.serializeConstraints($('src').value, {}); show($('src').value); };   // new spacing = fresh layout, so pins are dropped
-translate(false);
+const later = () => { clearTimeout(timer); timer = setTimeout(show, 350); };
+function preset(set, key) { last[tab] = key; ta().value = set[key]; show(); }
+function chips(box, set) { box.innerHTML = ''; Object.keys(set).forEach(k => { const b = document.createElement('button'); b.textContent = k; b.onclick = () => preset(set, k); box.appendChild(b); }); }
+function setTab(t) { tab = t; $('t-view').classList.toggle('on', t === 'view'); $('t-mmd').classList.toggle('on', t === 'mmd'); $('p-view').hidden = t !== 'view'; $('p-mmd').hidden = t !== 'mmd'; $('pay').textContent = '(drag something)'; show(); }
+
+$('model').value = MODEL; $('vsrc').value = VIEWS.Containers; $('msrc').value = MMD['Align + distribute'];
+chips($('vp'), VIEWS); chips($('mp'), MMD);
+$('vsrc').oninput = $('msrc').oninput = $('model').oninput = later;
+$('t-view').onclick = () => setTab('view'); $('t-mmd').onclick = () => setTab('mmd');
+$('rt').onchange = show; $('cmp').onchange = show;
+$('sp').onchange = () => { ta().value = strip(ta().value); show(); };          // new spacing = fresh layout, so pins are dropped
+$('clr').onclick = () => { ta().value = strip(ta().value); show(); };
+$('rst').onclick = () => { ta().value = (tab === 'view' ? VIEWS : MMD)[last[tab]]; show(); };
+// browser print: swap in the light palette synchronously, then restore
+addEventListener('beforeprint', () => { if (h && out.firstChild) out.firstChild.innerHTML = h.diagram.svg({ theme: 'light' }); });
+addEventListener('afterprint', () => { if (h && out.firstChild) out.firstChild.innerHTML = h.diagram.svg({ editable: true }); });
+show();
 </script>
 </body>
 </html>

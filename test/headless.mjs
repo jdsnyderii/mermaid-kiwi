@@ -101,3 +101,15 @@ const got = []; const hv = await run({ models: { 'model.dsl': model }, measure, 
 assert.equal(hv.length, 1); assert.ok(document.querySelector('pre.view').innerHTML.includes('<svg'), 'view fence replaced by svg');
 assert.equal(document.querySelector('pre.view').dataset.hash, K.viewHash(view));
 console.log('view front-end OK');
+
+// ---- routing: arrowheads must not sit on a bend ----
+for (const [name, v, sp] of [['of bank', 'model m\nof bank\n', 1], ['of api', 'model m\nof api\n', 1], ['all', 'model m\nall\ndir LR\n', 1], ['tight', 'model m\nof bank\n', 0.6]]) {
+  const d = await K.buildView(v, { models: { m: model }, measure, spacing: sp });
+  d.g.routes.forEach((P, i) => {
+    if (!P || P.length < 3) return;                                   // straight lines have nothing to bend
+    const a = P[P.length - 2], b = P[P.length - 1], last = Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]);
+    assert.ok(last >= 10, `${name}: ${d.g.edges[i].a}->${d.g.edges[i].b} ends with a ${last}px segment`);
+    assert.ok(a[0] === b[0] || a[1] === b[1], 'final segment is axis-aligned');
+  });
+}
+console.log('routing lead-in OK');
