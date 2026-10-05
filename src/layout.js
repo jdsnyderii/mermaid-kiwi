@@ -2,14 +2,15 @@
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Solver, Variable, Expression as E, Constraint as C, Operator as O, Strength as S } from 'kiwi.js';
 
-export async function elkLayout(g, sp = 1) {
+// ELK takes spacing from the node whose children it is laying out. Options given only on the root leave the inside of every
+// boundary at ELK's 20px defaults (edges there become tiny or invisible), so each boundary gets the full set, scaled by `inner`.
+const elkOpts = (g, k) => ({ 'elk.algorithm': 'layered', 'elk.direction': g.dir, 'elk.spacing.nodeNode': String(80 * k), 'elk.layered.spacing.nodeNodeBetweenLayers': String(120 * k),
+  'elk.spacing.edgeNode': String(30 * k), 'elk.layered.spacing.edgeNodeBetweenLayers': String(30 * k), 'elk.spacing.componentComponent': String(80 * k) });
+export async function elkLayout(g, sp = 1, inner = 0.85) {
   const kids = p => g.list.filter(i => i.parent === p).map(i => i.box
-    ? { id: i.id, layoutOptions: { 'elk.padding': '[top=52,left=34,bottom=34,right=34]' }, children: kids(i.id) }
+    ? { id: i.id, layoutOptions: { 'elk.padding': '[top=52,left=34,bottom=34,right=34]', ...elkOpts(g, sp * inner) }, children: kids(i.id) }
     : { id: i.id, width: i.w, height: i.h });
-  const r = await new ELK().layout({ id: 'root',
-    layoutOptions: { 'elk.algorithm': 'layered', 'elk.direction': g.dir, 'elk.hierarchyHandling': 'INCLUDE_CHILDREN',
-      'elk.spacing.nodeNode': String(80 * sp), 'elk.layered.spacing.nodeNodeBetweenLayers': String(120 * sp), 'elk.spacing.edgeNode': String(30 * sp),
-      'elk.layered.spacing.edgeNodeBetweenLayers': String(30 * sp), 'elk.spacing.componentComponent': String(80 * sp) },
+  const r = await new ELK().layout({ id: 'root', layoutOptions: { ...elkOpts(g, sp), 'elk.hierarchyHandling': 'INCLUDE_CHILDREN' },
     children: kids(undefined), edges: g.edges.map((e, i) => ({ id: 'e' + i, sources: [e.a], targets: [e.b] })) });
   (function walk(c, ox, oy) { (c.children || []).forEach(k => { g.items[k.id].x0 = ox + k.x; g.items[k.id].y0 = oy + k.y; walk(k, ox + k.x, oy + k.y); }); })(r, 0, 0);
 }

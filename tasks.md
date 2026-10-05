@@ -15,6 +15,8 @@ Status key: [ ] open, [~] partly done. Nothing below has been verified in a real
 
 - [ ] Edge options beyond routing: `edges` is the only option today; candidates are per-view `spacing`, `theme`, and arrowhead/line style. Keep Mermaid `%% option:` and view statements in step.
 
+- [ ] Spacing is only a multiplier today; consider absolute `gap`/`padding` options per view and per boundary, and a per-boundary override (e.g. `style id:api inner-spacing=1.2`).
+
 ## Viewer integration (Python / Docker)
 - [ ] Write-back endpoint. Contract is in `README.md`. Framework still undecided (FastAPI/Flask/Starlette/stdlib).
   - [ ] Find the fence by name (view) or hash (mermaid); 409 on hash mismatch; replace only the generated block.

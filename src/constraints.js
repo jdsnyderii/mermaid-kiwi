@@ -24,14 +24,15 @@ export function parseOptions(src) {
   const opts = {}, warnings = [];
   src.split('\n').forEach((line, i) => { const m = line.match(OPT); if (!m) return;
     m[1].trim().split(/\s+/).forEach(t => {
-      const kv = t.match(/^(\w+)=(.+)$/); if (!kv) { warnings.push(`line ${i + 1}: option "${t}" needs key=value`); return; }
+      const kv = t.match(/^([\w-]+)=(.+)$/); if (!kv) { warnings.push(`line ${i + 1}: option "${t}" needs key=value`); return; }
       if (kv[1] === 'edges') { const v = edgeMode(kv[2]); if (v) opts.edges = v; else warnings.push(`line ${i + 1}: edges must be routed or straight`); }
+      else if (kv[1] === 'inner-spacing') { const n = +kv[2]; if (n >= 0.3 && n <= 3) opts.inner = n; else warnings.push(`line ${i + 1}: inner-spacing must be between 0.3 and 3`); }
       else warnings.push(`line ${i + 1}: unknown option "${kv[1]}"`); }); });
   return { opts, warnings };
 }
 // Replace the option line for `key`, or insert one under the flowchart/graph header.
 export function setMermaidOption(src, key, value) {
-  const L = src.split('\n'), line = `  %% option: ${key}=${value}`, i = L.findIndex(l => OPT.test(l) && new RegExp('\\b' + key + '=').test(l));
+  const L = src.split('\n'), line = `  %% option: ${key}=${value}`, i = L.findIndex(l => OPT.test(l) && new RegExp('(^|\\s)' + key + '=').test(l));
   if (i >= 0) L[i] = line; else L.splice(L.findIndex(l => /^\s*(flowchart|graph)\b/.test(l)) + 1, 0, line);
   return L.join('\n');
 }

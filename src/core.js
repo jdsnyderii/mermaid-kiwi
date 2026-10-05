@@ -26,10 +26,10 @@ export async function build(src, o = {}) {
   const mermaid = o.mermaid || globalThis.mermaid;
   if (!mermaid) throw Error('MermaidKiwi: pass {mermaid} or load mermaid first');
   const g = await readGraph(src, mermaid, o.measure);
-  await elkLayout(g, o.spacing ?? 1);
+  const { opts, warnings } = parseOptions(src);
+  await elkLayout(g, o.spacing ?? 1, opts.inner ?? o.innerSpacing ?? 0.85);
   const pins = {}, cons = [];
   parseConstraints(src).forEach(c => c.op === 'pin' ? pins[c.args[0]] = { x: c.opts.x, y: c.opts.y } : cons.push(c));
-  const { opts, warnings } = parseOptions(src);
   return finish(g, cons, pins, o, warnings, opts.edges);
 }
 
@@ -39,7 +39,7 @@ export async function buildView(text, o = {}) {
   const v = parseView(text); if (!v.model) throw Error('view: missing "model <path>" line');
   const mt = o.models && o.models[v.model] !== undefined ? o.models[v.model] : await (o.loadModel || fetchModel)(v.model);
   const { g, cons, pins, warnings } = viewGraph(parseDsl(mt), v, o.measure || defaultMeasure());
-  await elkLayout(g, o.spacing ?? 1);
+  await elkLayout(g, o.spacing ?? 1, v.inner ?? o.innerSpacing ?? 0.85);
   return finish(g, cons, pins, o, [...v.warnings, ...warnings], v.edges);
 }
 

@@ -10,6 +10,7 @@ Two front-ends, one shared engine. They are separate features and never share sy
 | Styles | `:::person` classes (fixed set) | `style tag:external fill=#999 shape=hexagon` |
 | Layout saved as | `%% @layout` block of `%% constrain: pin` lines | a `layout` line followed by `pin` lines |
 | Edge routing | `%% option: edges=routed\|straight` | `edges routed\|straight` |
+| Spacing inside boundaries | `%% option: inner-spacing=0.85` | `inner-spacing 0.85` |
 | Needs Mermaid | yes (injected, tested with 11.15.0) | no |
 
 Shared engine: ELK start layout -> Kiwi constraints/pins -> A* edge routing -> self-contained SVG -> drag-to-pin.
@@ -30,7 +31,7 @@ Bundles (`npm run build`): `dist/mermaid-kiwi.iife.min.js` (global `MermaidKiwi`
 <script>mermaid.initialize({startOnLoad:false}); MermaidKiwi.run({mermaid, editable:true, onChange});</script>
 ```
 Only flowcharts containing `%% constrain:` or `%% @layout` are taken; every other fence goes to `mermaid.run()`.
-Options (not constraints): `%% option: edges=routed|straight` (default routed). A fence containing only an option line is still taken over by MermaidKiwi.
+Options (not constraints): `%% option: edges=routed|straight` (default routed), `%% option: inner-spacing=0.85` (spacing inside boundaries as a multiple of the outer spacing, 0.3 to 3). A fence containing only an option line is still taken over by MermaidKiwi.
 Ops: `align-x/align-y ids`, `left-of/above/below ids gap=N`, `distribute-x/distribute-y ids [gap=N]`, `pin id x= y=`; any op accepts `strength=required|strong|medium|weak`.
 
 ## Front-end 2: view fences
@@ -41,6 +42,7 @@ expand api               // also open these as boundaries
 include a, b   hide c    // force-show / remove elements
 dir TB|LR|BT|RL    title "Internet Banking"
 edges routed|straight    // orthogonal routed edges (default) or straight lines
+inner-spacing 0.85       // spacing inside boundaries, as a multiple of the outer spacing
 style <selector> shape=person|box|rounded|cylinder|circle|hexagon fill= stroke= color= stroke-width= stroke-dasharray= width= height=
 align-y email mainframe  // any constraint op, no prefix
 layout                   // generated below this line
@@ -50,7 +52,7 @@ Comments: `//`, or `#` followed by a space (so `#08427b` is a colour). Selectors
 Cascade: built-in defaults, then your `style` lines, least to most specific (`*` < type < tag < id), later wins within a level. Relationships between nested elements roll up to whatever is visible.
 Model files use the existing element/relationship syntax (`person`, `softwareSystem`, `container`, `component`, `a -> b "desc" "tech"`), with `{` at the end of a line.
 
-Edge routing: the fence decides (`edges` / `%% option: edges=`); the host option `route` passed to `run`/`mount` is only the default for fences that say nothing. `setViewStatement(text,'edges','straight')` and `setMermaidOption(src,'edges','straight')` edit the line for UIs.
+Spacing: host `spacing` scales everything; `inner-spacing` (fence) or `innerSpacing` (host default 0.85) scales the inside of boundaries relative to it. Edge routing: the fence decides (`edges` / `%% option: edges=`); the host option `route` passed to `run`/`mount` is only the default for fences that say nothing. `setViewStatement(text,'edges','straight')` and `setMermaidOption(src,'edges','straight')` edit the line for UIs.
 
 Model loading: `run({models:{path:text}})` or `run({loadModel: async path => text})`; the default fetches `path`. Fence markup from the server: `<pre class="view" data-name="bank-containers" data-hash="...">escaped source</pre>`.
 

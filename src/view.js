@@ -1,5 +1,5 @@
 // FRONT-END 2 (view fences): a small view language over a model file. No Mermaid involved.
-//   model model.dsl     of bank | all     dir TB     edges routed|straight     title "..."    include a, b    expand api    hide x
+//   model model.dsl     of bank | all     dir TB     edges routed|straight     inner-spacing 0.85     title "..."    include a, b    expand api    hide x
 //   style <selector> shape=person fill=#08427b ...      align-y a b     above a b gap=60 ...
 //   layout              <- generated below this line: pin id x=.. y=..
 import { parseDsl, TL } from './dsl.js';
@@ -14,7 +14,7 @@ const kv = ts => { const o = {}, a = []; ts.forEach(x => { const m = x.match(/^(
 const uncomment = raw => raw.replace(/(^|\s)(\/\/|#(?=\s|$)).*$/, '').trim();   // '#' only starts a comment when followed by space, so #08427b is a colour
 
 export function parseView(text) {
-  const v = { model: null, of: null, all: false, dir: 'TB', edges: null, title: '', expand: [], include: [], hide: [], styles: [], cons: [], pins: {}, warnings: [] };
+  const v = { model: null, of: null, all: false, dir: 'TB', edges: null, inner: null, title: '', expand: [], include: [], hide: [], styles: [], cons: [], pins: {}, warnings: [] };
   let inLayout = false;
   text.split('\n').forEach((raw, i) => {
     const line = uncomment(raw); if (!line) return;
@@ -28,6 +28,7 @@ export function parseView(text) {
       case 'all': v.all = true; break;
       case 'dir': v.dir = (rest[0] || 'TB').toUpperCase(); break;
       case 'edges': { const m = edgeMode(rest[0] || ''); if (m) v.edges = m; else v.warnings.push(`line ${n}: edges must be routed or straight`); break; }
+      case 'inner-spacing': { const x = +rest[0]; if (x >= 0.3 && x <= 3) v.inner = x; else v.warnings.push(`line ${n}: inner-spacing must be between 0.3 and 3`); break; }
       case 'title': v.title = rest.join(' '); break;
       case 'include': case 'expand': case 'hide': v[op].push(...list(rest)); break;
       case 'style': v.styles.push({ sel: rest[0], props: kv(rest.slice(1)).o }); break;

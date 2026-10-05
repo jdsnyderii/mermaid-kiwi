@@ -173,3 +173,19 @@ assert.equal(mset, 'flowchart TB\n  %% option: edges=straight\n  A-->B\n'); asse
 assert.match(K.serializeConstraints(ms, { A: { x: 10, y: 10 } }), /option: edges=straight/, 'write-back keeps the option');
 assert.equal(K.contentHash(ms), K.contentHash(K.serializeConstraints(ms, { A: { x: 10, y: 10 } })));
 console.log('edges option OK');
+
+// ---- spacing inside boundaries: ELK only honours spacing set on the boundary itself, so edges inside boxes used to be ~20px ----
+const sib = d => { const L = d.g.list.filter(i => !i.box && i.parent), out = [];
+  L.forEach((a, i) => L.slice(i + 1).filter(b => b.parent === a.parent).forEach(b => out.push(Math.max(b.px - (a.px + a.pw), a.px - (b.px + b.pw), b.py - (a.py + a.ph), a.py - (b.py + b.ph))))); return Math.min(...out); };
+const sDef = await K.buildView('model m\nof bank\n', mm), sTight = await K.buildView('model m\nof bank\ninner-spacing 0.5\n', mm), sWide = await K.buildView('model m\nof bank\n', { ...mm, innerSpacing: 1 });
+console.log('min gap between shapes inside the boundary: default', Math.round(sib(sDef)), '| inner-spacing 0.5:', Math.round(sib(sTight)), '| host innerSpacing 1:', Math.round(sib(sWide)));
+assert.ok(sib(sDef) >= 90, 'default leaves room for visible edges inside boundaries (was 20)');
+assert.ok(sib(sTight) < sib(sDef) && sib(sWide) > sib(sDef), 'inner-spacing scales the inside spacing; fence value and host option both work');
+assert.equal(K.parseView('model m\ninner-spacing 0.7\n').inner, 0.7);
+assert.ok((await K.render('model m\ninner-spacing 9\n', { ...mm, kind: 'view' })).warnings.some(w => /inner-spacing must be/.test(w)), 'view: out-of-range value warns');
+assert.equal(K.parseOptions('flowchart TB\n  %% option: inner-spacing=0.6\n').opts.inner, 0.6);
+assert.ok(K.parseOptions('flowchart TB\n  %% option: inner-spacing=0\n').warnings.length === 1, 'mermaid: out-of-range value warns');
+const mb = 'flowchart TB\n  subgraph S["Box"]\n    A[One] --> B[Two]\n    B --> C[Three]\n  end\n  %% option: inner-spacing=INNER\n';
+const gm = async v => { const d = await K.build(mb.replace('INNER', v), { mermaid, measure }); return sib(d); };
+assert.ok(await gm('1.2') > await gm('0.5'), 'mermaid fence: boundary interior spacing follows inner-spacing');
+console.log('inner spacing OK');
