@@ -113,3 +113,63 @@ for (const [name, v, sp] of [['of bank', 'model m\nof bank\n', 1], ['of api', 'm
   });
 }
 console.log('routing lead-in OK');
+
+// ---- built-in non-overlap: shapes keep out of boundaries they do not belong to, and out of each other ----
+const overlaps = d => { let n = 0; const L = d.g.list, anc = (a, x) => { for (let c = d.g.items[x.parent]; c; c = d.g.items[c.parent]) if (c === a) return true; return false; };
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) { const p = L[i], q = L[j]; if (anc(p, q) || anc(q, p)) continue;
+    if (p.px < q.px + q.pw && q.px < p.px + p.pw && p.py < q.py + q.ph && q.py < p.py + p.ph) n++; } return n; };
+const base = await K.buildView('model m\nof bank\n', { models: { m: model }, measure });
+const ctr = n => { const x = base.g.items[n]; return `x=${x.px + x.pw / 2} y=${x.py + x.ph / 2}`; };
+for (const [what, pin] of [['outside shape dropped inside a boundary', `pin email ${ctr('web')}`], ['shape dropped on another shape', `pin customer ${ctr('email')}`],
+                           ['shape dropped half over a boundary edge', `pin email x=${base.g.items.bank.px + 20} y=${base.g.items.bank.py + 40}`]]) {
+  const pd = await K.buildView(`model m\nof bank\n${pin}\n`, { models: { m: model }, measure });
+  assert.equal(overlaps(pd), 0, what + ': no overlaps'); assert.equal(pd.warnings.length, 0, what + ': ' + pd.warnings);
+  assert.ok(pd.g.sepActive, what + ': separators were used');
+}
+const unpinned = await K.buildView('model m\nof bank\n', { models: { m: model }, measure });
+assert.ok(!unpinned.g.sepActive, 'no separators when nothing overlaps');
+console.log('non-overlap OK');
+
+// ---- dragging: the shape follows the pointer 1:1 even when it defines the picture's top edge ----
+const { mount } = await import('../dist/mermaid-kiwi.esm.js');
+const box = document.createElement('div'); document.body.innerHTML = ''; document.body.appendChild(box);
+const events = []; const h2 = await mount(box, 'model m\nof bank\n', { kind: 'view', models: { m: model }, measure, editable: true, onChange: c => events.push(c) });
+const top = h2.diagram.g.items.customer, startY = top.py + top.ph / 2, vb0 = box.querySelector('svg').getAttribute('viewBox').split(' ').map(Number);
+const fire = (t, x, y) => box.dispatchEvent(new dom.window.MouseEvent(t, { clientX: x, clientY: y, bubbles: true }));
+box.querySelector('[data-id="customer"]').dispatchEvent(new dom.window.MouseEvent('pointerdown', { clientX: 100, clientY: 300, bubbles: true }));
+for (let i = 1; i <= 6; i++) {                                                    // drag UP by 20px per step, 120px in total (the picture's top edge grows)
+  fire('pointermove', 100, 300 - 20 * i);
+  const o = box.querySelector('svg').getAttribute('viewBox').split(' ').map(Number);
+  assert.ok(o[0] === vb0[0] && o[1] === vb0[1], 'frame origin is frozen while dragging');
+  assert.ok(Math.abs(h2.diagram.pins.customer.y - (startY - 20 * i)) < 1, `step ${i}: follows the pointer (got ${h2.diagram.pins.customer.y - startY})`);
+}
+fire('pointerup', 100, 180);
+assert.equal(events.length, 1, 'one write-back on drop'); assert.match(events[0].layout, /pin customer/, 'drop writes a pin');
+console.log('drag maths OK');
+
+// ---- edge-routing option in both front-ends: the fence decides, the host option is only the default ----
+const mm = { models: { m: model }, measure };
+assert.equal(K.parseView('model m\nedges straight\n').edges, 'straight');
+assert.equal((await K.buildView('model m\nof bank\nedges straight\n', mm)).g.routes, null, 'view: edges straight -> no routing');
+assert.ok((await K.buildView('model m\nof bank\n', mm)).g.routes, 'view: routed by default');
+assert.ok((await K.buildView('model m\nof bank\nedges routed\n', { ...mm, route: false })).g.routes, 'view: fence beats host option (routed)');
+assert.equal((await K.buildView('model m\nof bank\nedges straight\n', { ...mm, route: true })).g.routes, null, 'view: fence beats host option (straight)');
+assert.equal((await K.buildView('model m\nof bank\n', { ...mm, route: false })).g.routes, null, 'view: host option is the default when the fence is silent');
+assert.ok((await K.render('model m\nof bank\nedges sideways\n', { ...mm, kind: 'view' })).warnings.some(w => /edges must be/.test(w)), 'view: bad value warns');
+const vs = K.setViewStatement('model m\nof bank\n', 'edges', 'straight');
+assert.equal(vs, 'model m\nedges straight\nof bank\n'); assert.equal(K.setViewStatement(vs, 'edges', 'routed'), 'model m\nedges routed\nof bank\n');
+const vOut = K.serializeView(vs, { web: { x: 10, y: 10 } }); assert.match(vOut, /edges straight/, 'write-back keeps the option'); assert.equal(K.viewHash(vOut), K.viewHash(vs));
+
+const ms = 'flowchart TB\n  %% option: edges=straight\n  A[One] --> B[Two]\n  A --> C[Three]\n';
+assert.ok(K.isConstrained(ms), 'a fence with only an option line is ours');
+assert.equal(K.parseOptions(ms).opts.edges, 'straight');
+assert.equal((await K.build(ms, { mermaid, measure })).g.routes, null, 'mermaid: edges=straight -> no routing');
+assert.ok((await K.build(ms.replace('straight', 'routed'), { mermaid, measure })).g.routes, 'mermaid: edges=routed');
+assert.ok((await K.build(ms.replace('  %% option: edges=straight\n', '  %% constrain: align-y B C\n'), { mermaid, measure })).g.routes, 'mermaid: routed by default');
+assert.ok((await K.build(ms.replace('straight', 'zigzag'), { mermaid, measure })).warnings.some(w => /edges must be/.test(w)), 'mermaid: bad value warns');
+assert.ok((await K.build('flowchart TB\n  %% option: colour=red\n  A-->B\n', { mermaid, measure })).warnings.some(w => /unknown option/.test(w)));
+const mset = K.setMermaidOption('flowchart TB\n  A-->B\n', 'edges', 'straight');
+assert.equal(mset, 'flowchart TB\n  %% option: edges=straight\n  A-->B\n'); assert.match(K.setMermaidOption(mset, 'edges', 'routed'), /edges=routed/);
+assert.match(K.serializeConstraints(ms, { A: { x: 10, y: 10 } }), /option: edges=straight/, 'write-back keeps the option');
+assert.equal(K.contentHash(ms), K.contentHash(K.serializeConstraints(ms, { A: { x: 10, y: 10 } })));
+console.log('edges option OK');

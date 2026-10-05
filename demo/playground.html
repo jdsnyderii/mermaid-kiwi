@@ -39,18 +39,20 @@ textarea{width:100%;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;backgro
   <details><summary>Model file (<code>model.dsl</code>, shared by every view)</summary><textarea id="model" rows="14" spellcheck="false"></textarea></details>
   <ul class="try"><li><b>Drag</b> a shape or a boundary title. A <code>layout</code> block appears in the fence.</li>
   <li>Change <code>of bank</code> to <code>of api</code>, or add <code>expand api</code>.</li>
-  <li>Add <code>style tag:external shape=hexagon</code> or <code>align-x web db</code>.</li></ul>
+  <li>Add <code>style tag:external shape=hexagon</code> or <code>align-x web db</code>.</li>
+  <li>Type <code>edges straight</code> (or use the Routed/Straight menu, which writes that line).</li></ul>
  </div>
  <div class="card" id="p-mmd" hidden>
   <div class="chips" id="mp"></div>
   <textarea id="msrc" rows="14" spellcheck="false"></textarea>
   <label class="row"><input type="checkbox" id="cmp"> Compare: render the same text with plain Mermaid (constraints ignored)</label>
   <ul class="try"><li><b>Drag</b> a shape: pins are written as <code>%% constrain: pin</code> lines under <code>%% @layout</code>.</li>
-  <li>Edit the <code>%% constrain:</code> lines. Plain Mermaid treats them as comments.</li></ul>
+  <li>Edit the <code>%% constrain:</code> lines. Plain Mermaid treats them as comments.</li>
+  <li>Add <code>%% option: edges=straight</code> (or use the Routed/Straight menu, which writes that line).</li></ul>
  </div>
  <div class="card" style="margin-top:12px">
   <div class="row">Spacing <input type="range" id="sp" min="0.6" max="2.5" step="0.1" value="1">
-   <select id="rt"><option value="o">Routed edges</option><option value="s">Straight edges</option></select>
+   <select id="rt" title="writes an edges line into the fence"><option value="routed">Routed edges</option><option value="straight">Straight edges</option></select>
    <button id="clr">Clear pins</button><button id="rst">Reset</button></div>
   <details><summary>What a server would receive on drop</summary><pre id="pay">(drag something)</pre></details>
   <details id="svgd"><summary>Standalone SVG (copy)</summary><textarea id="svgsrc" rows="5" readonly></textarea></details>
@@ -152,14 +154,14 @@ async function show() {
     }
     const el = document.createElement('div'), kind = tab === 'view' ? 'view' : 'mermaid';
     const hh = await K.mount(el, ta().value, { kind, mermaid: window.mermaid, models: { 'model.dsl': $('model').value }, editable: true,
-      spacing: +$('sp').value, route: $('rt').value === 'o',
+      spacing: +$('sp').value,                                  // edges routed/straight comes from the fence itself
       onWarnings: w => { if (my === seq) $('msg').textContent = w.join('\n'); },
       onChange: c => {                                  // this is the write-back: the fence text itself is rewritten
         ta().value = c.source; stats(c.hash);
         $('pay').textContent = JSON.stringify(kind === 'view' ? { view: $('vname').value, baseHash: c.baseHash || '(from data-hash)', layout: c.layout } : { baseHash: c.baseHash || '(from data-hash)', pins: c.pins }, null, 1);
       } });
     if (my !== seq) { hh.destroy(); return; }
-    h = hh; out.replaceChildren(el); stats(); $('svgsrc').value = h.diagram.svg({ theme: 'light' });
+    h = hh; out.replaceChildren(el); stats(); syncEdges(); $('svgsrc').value = h.diagram.svg({ theme: 'light' });
   } catch (e) { if (my === seq) { $('msg').textContent = String(e.message || e); out.replaceChildren(); } }
 }
 function stats(hash) {
@@ -175,7 +177,9 @@ $('model').value = MODEL; $('vsrc').value = VIEWS.Containers; $('msrc').value = 
 chips($('vp'), VIEWS); chips($('mp'), MMD);
 $('vsrc').oninput = $('msrc').oninput = $('model').oninput = later;
 $('t-view').onclick = () => setTab('view'); $('t-mmd').onclick = () => setTab('mmd');
-$('rt').onchange = show; $('cmp').onchange = show;
+function syncEdges() { const e = tab === 'view' ? K.parseView(ta().value).edges : K.parseOptions(ta().value).opts.edges; $('rt').value = e || 'routed'; }
+$('rt').onchange = () => { const v = $('rt').value; ta().value = tab === 'view' ? K.setViewStatement(ta().value, 'edges', v) : K.setMermaidOption(ta().value, 'edges', v); show(); };   // the toggle edits the fence
+$('cmp').onchange = show;
 $('sp').onchange = () => { ta().value = strip(ta().value); show(); };          // new spacing = fresh layout, so pins are dropped
 $('clr').onclick = () => { ta().value = strip(ta().value); show(); };
 $('rst').onclick = () => { ta().value = (tab === 'view' ? VIEWS : MMD)[last[tab]]; show(); };

@@ -5,16 +5,18 @@ import { parseView, viewGraph } from './view.js';
 import { elkLayout, solveLayout } from './layout.js';
 import { routeEdges } from './route.js';
 import { drawSvg } from './render.js';
-import { parseConstraints } from './constraints.js';
+import { parseConstraints, parseOptions } from './constraints.js';
 export * from './constraints.js';
 export * from './dsl.js';
 export * from './view.js';
 export { defaultMeasure } from './graph.js';
 
 // Both front-ends end up here: a graph + constraints + pins. build() keeps the solved graph so drag handling can re-solve cheaply.
-function finish(g, cons, pins, o, extra = []) {
-  const d = { g, cons, pins, warnings: [],
-    solve(route = true) { d.warnings = [...extra, ...solveLayout(g, cons, d.pins)]; g.routes = route && o.route !== false ? routeEdges(g) : null; return d; },
+// `edges` comes from the fence ('routed' | 'straight'); when the fence says nothing, the host option `route` decides (default: routed).
+function finish(g, cons, pins, o, extra = [], edges = null) {
+  const routed = edges ? edges === 'routed' : o.route !== false;
+  const d = { g, cons, pins, routed, warnings: [],
+    solve(route = true) { d.warnings = [...extra, ...solveLayout(g, cons, d.pins)]; g.routes = route && routed ? routeEdges(g) : null; return d; },
     svg(opts = {}) { return drawSvg(g, { theme: o.theme, ...opts }); } };
   return d.solve();
 }
@@ -27,7 +29,8 @@ export async function build(src, o = {}) {
   await elkLayout(g, o.spacing ?? 1);
   const pins = {}, cons = [];
   parseConstraints(src).forEach(c => c.op === 'pin' ? pins[c.args[0]] = { x: c.opts.x, y: c.opts.y } : cons.push(c));
-  return finish(g, cons, pins, o);
+  const { opts, warnings } = parseOptions(src);
+  return finish(g, cons, pins, o, warnings, opts.edges);
 }
 
 // Front-end 2: a view fence. The model comes from o.models[path] or o.loadModel(path); Mermaid is not used.
@@ -37,7 +40,7 @@ export async function buildView(text, o = {}) {
   const mt = o.models && o.models[v.model] !== undefined ? o.models[v.model] : await (o.loadModel || fetchModel)(v.model);
   const { g, cons, pins, warnings } = viewGraph(parseDsl(mt), v, o.measure || defaultMeasure());
   await elkLayout(g, o.spacing ?? 1);
-  return finish(g, cons, pins, o, [...v.warnings, ...warnings]);
+  return finish(g, cons, pins, o, [...v.warnings, ...warnings], v.edges);
 }
 
 export async function render(src, o = {}) {

@@ -14,7 +14,7 @@ export async function elkLayout(g, sp = 1) {
   (function walk(c, ox, oy) { (c.children || []).forEach(k => { g.items[k.id].x0 = ox + k.x; g.items[k.id].y0 = oy + k.y; walk(k, ox + k.x, oy + k.y); }); })(r, 0, 0);
 }
 
-export function solveLayout(g, cons, pins) {
+function solveOnce(g, cons, pins, seps) {
   const sv = new Solver(), errs = [], add = (l, o, r, st = S.required) => sv.addConstraint(new C(l, o, r, st));
   g.list.forEach(i => {
     i.x = new Variable(); i.y = new Variable();
@@ -45,11 +45,50 @@ export function solveLayout(g, cons, pins) {
   for (const id in pins) { const n = g.items[id]; if (!n) continue;                                              // manual layout = strong pins
     if (pins[id].x !== undefined) add(cx(n), O.Eq, pins[id].x, S.strong);
     if (pins[id].y !== undefined) add(cy(n), O.Eq, pins[id].y, S.strong); }
+  for (const q of seps) {                                                                                         // chosen "keep apart" constraints
+    try { if (q.axis === 'x') add(new E(q.lo.x, W(q.lo), GAP), O.Le, q.hi.x); else add(new E(q.lo.y, H(q.lo), GAP), O.Le, q.hi.y); } catch (e) { /* cannot be satisfied: leave the overlap, it is reported */ }
+  }
   sv.updateVariables();
   g.list.forEach(i => { i.px = i.x.value(); i.py = i.y.value(); i.pw = i.box ? i.wv.value() : i.w; i.ph = i.box ? i.hv.value() : i.h; });
-  const L = g.list.filter(i => !i.box); let ov = 0;
-  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) { const p = L[i], q = L[j];
-    if (p.px < q.px + q.pw - 2 && q.px < p.px + p.pw - 2 && p.py < q.py + q.ph - 2 && q.py < p.py + p.ph - 2) ov++; }
+  return errs;
+}
+
+// ---- built-in non-overlap ----
+// Kiwi is linear, so "A and B must not overlap" (a disjunction) cannot be stated directly. Instead: solve, find shapes that are
+// too close, pick ONE separating side per pair from the geometry, add it as a required constraint, and solve again.
+// Applies to shape/shape, shape/foreign boundary and boundary/boundary pairs (a shape is allowed inside its own boundaries).
+// The chosen side is remembered (g.ord) while the pair stays close, so a shape being dragged past another pushes it
+// instead of making it jump to the other side.
+const GAP = 20;
+const isAnc = (g, a, n) => { for (let c = g.items[n.parent]; c; c = g.items[c.parent]) if (c === a) return true; return false; };
+const gap2 = (p, q, m) => ({ ox: Math.min(p.px + p.pw, q.px + q.pw) - Math.max(p.px, q.px) + m, oy: Math.min(p.py + p.ph, q.py + q.ph) - Math.max(p.py, q.py) + m });
+function* pairs(g) {
+  const L = g.list;
+  for (let i = 0; i < L.length; i++) for (let j = i + 1; j < L.length; j++) if (!isAnc(g, L[i], L[j]) && !isAnc(g, L[j], L[i])) yield [L[i], L[j]];
+}
+
+export function solveLayout(g, cons, pins) {
+  g.ord = g.ord || new Map(); let seps = [], errs = [];
+  for (let k = 0; k < 8; k++) {
+    errs = solveOnce(g, cons, pins, seps);
+    const more = [], near = (a, b) => { if (a === b || isAnc(g, a, b) || isAnc(g, b, a)) return false; const { ox, oy } = gap2(a, b, GAP); return ox > 0 && oy > 0; };
+    const chain = n => { const c = [n]; for (let a = g.items[n.parent]; a; a = g.items[a.parent]) c.push(a); return c; };
+    for (const [p, q] of pairs(g)) {
+      if (!near(p, q)) continue;                                                                                  // far enough apart
+      // if a boundary around either shape is already too close to the other, separating the boundaries separates everything inside;
+      // adding a second, independently chosen rule for the contents can contradict it
+      if (chain(p).some(a => chain(q).some(b => (a !== p || b !== q) && near(a, b)))) continue;
+      if (seps.some(s => (s.lo === p && s.hi === q) || (s.lo === q && s.hi === p))) continue;
+      const { ox, oy } = gap2(p, q, GAP);
+      const key = p.id + '|' + q.id; let o = g.ord.get(key);
+      if (!o) { const axis = ox < oy ? 'x' : 'y', c = n => axis === 'x' ? n.px + n.pw / 2 : n.py + n.ph / 2; o = { axis, lo: c(p) <= c(q) ? p : q, p, q }; g.ord.set(key, o); }
+      more.push({ axis: o.axis, lo: o.lo, hi: o.lo === p ? q : p });
+    }
+    if (!more.length) break; seps = seps.concat(more);
+  }
+  for (const [key, o] of g.ord) { const { ox, oy } = gap2(o.p, o.q, GAP); if (ox < -2 * GAP || oy < -2 * GAP) g.ord.delete(key); }  // forget pairs that moved apart
+  g.sepActive = seps.length > 0;
+  let ov = 0; for (const [p, q] of pairs(g)) { const { ox, oy } = gap2(p, q, 0); if (ox > 0 && oy > 0) ov++; }
   if (ov) errs.push(`${ov} overlapping shape pair(s): drag one apart or add a constraint`);
   return errs;
 }

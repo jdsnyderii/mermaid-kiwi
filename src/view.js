@@ -1,10 +1,10 @@
 // FRONT-END 2 (view fences): a small view language over a model file. No Mermaid involved.
-//   model model.dsl     of bank | all     dir TB     title "..."    include a, b    expand api    hide x
+//   model model.dsl     of bank | all     dir TB     edges routed|straight     title "..."    include a, b    expand api    hide x
 //   style <selector> shape=person fill=#08427b ...      align-y a b     above a b gap=60 ...
 //   layout              <- generated below this line: pin id x=.. y=..
 import { parseDsl, TL } from './dsl.js';
 import { BASE, nodeSize, FONT } from './shapes.js';
-import { fnv1a } from './constraints.js';
+import { fnv1a, edgeMode } from './constraints.js';
 
 const OPS = new Set(['align-x', 'align-y', 'left-of', 'above', 'below', 'distribute-x', 'distribute-y']);
 const DIRS = { TB: 'DOWN', TD: 'DOWN', BT: 'UP', LR: 'RIGHT', RL: 'LEFT' };
@@ -14,7 +14,7 @@ const kv = ts => { const o = {}, a = []; ts.forEach(x => { const m = x.match(/^(
 const uncomment = raw => raw.replace(/(^|\s)(\/\/|#(?=\s|$)).*$/, '').trim();   // '#' only starts a comment when followed by space, so #08427b is a colour
 
 export function parseView(text) {
-  const v = { model: null, of: null, all: false, dir: 'TB', title: '', expand: [], include: [], hide: [], styles: [], cons: [], pins: {}, warnings: [] };
+  const v = { model: null, of: null, all: false, dir: 'TB', edges: null, title: '', expand: [], include: [], hide: [], styles: [], cons: [], pins: {}, warnings: [] };
   let inLayout = false;
   text.split('\n').forEach((raw, i) => {
     const line = uncomment(raw); if (!line) return;
@@ -27,6 +27,7 @@ export function parseView(text) {
       case 'of': v.of = rest[0]; break;
       case 'all': v.all = true; break;
       case 'dir': v.dir = (rest[0] || 'TB').toUpperCase(); break;
+      case 'edges': { const m = edgeMode(rest[0] || ''); if (m) v.edges = m; else v.warnings.push(`line ${n}: edges must be routed or straight`); break; }
       case 'title': v.title = rest.join(' '); break;
       case 'include': case 'expand': case 'hide': v[op].push(...list(rest)); break;
       case 'style': v.styles.push({ sel: rest[0], props: kv(rest.slice(1)).o }); break;
@@ -100,4 +101,11 @@ export function serializeView(text, pins, grid = 10) {
   const r = n => Math.round(n / grid) * grid;
   const lines = Object.keys(pins).sort().map(id => `  pin ${id}` + (pins[id].x !== undefined ? ` x=${r(pins[id].x)}` : '') + (pins[id].y !== undefined ? ` y=${r(pins[id].y)}` : ''));
   return cut(text).head + (lines.length ? `\nlayout\n${lines.join('\n')}` : '') + '\n';
+}
+
+// Replace the line that starts with `kw`, or insert one under the `model` line (used by UIs that toggle a statement).
+export function setViewStatement(text, kw, value) {
+  const L = text.split('\n'), first = l => uncomment(l).split(/\s+/)[0].toLowerCase(), i = L.findIndex(l => first(l) === kw);
+  if (i >= 0) L[i] = `${kw} ${value}`; else L.splice(L.findIndex(l => first(l) === 'model') + 1, 0, `${kw} ${value}`);
+  return L.join('\n');
 }

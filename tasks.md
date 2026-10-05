@@ -9,6 +9,12 @@ Status key: [ ] open, [~] partly done. Nothing below has been verified in a real
 
 - [ ] Playground's "compare with plain Mermaid" toggle failed under jsdom (no `getBBox`); confirm it works in a real browser. Print via Ctrl/Cmd+P is wired (light palette swap on `beforeprint`) but untested.
 
+- [ ] Verify in a real browser: dragging inside and out of boundaries (speed now 1:1 with the pointer; tested only with simulated events in jsdom), and the new push-away behaviour on touch devices.
+- [ ] Push-away is greedy: one separating side per pair, up to 8 rounds. Dense diagrams can still end with a reported overlap; consider a smarter pass (or letting the user lock a shape so it is never pushed).
+- [ ] Frozen frame while dragging clips shapes dragged past the top/left of the original picture until drop; consider padding the frame.
+
+- [ ] Edge options beyond routing: `edges` is the only option today; candidates are per-view `spacing`, `theme`, and arrowhead/line style. Keep Mermaid `%% option:` and view statements in step.
+
 ## Viewer integration (Python / Docker)
 - [ ] Write-back endpoint. Contract is in `README.md`. Framework still undecided (FastAPI/Flask/Starlette/stdlib).
   - [ ] Find the fence by name (view) or hash (mermaid); 409 on hash mismatch; replace only the generated block.

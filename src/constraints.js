@@ -15,7 +15,26 @@ export function parseConstraints(src) {
 
 // Only flowcharts that opt in (constraints or a generated layout block) are taken over; everything else is left to Mermaid.
 export const isConstrained = src =>
-  /^\s*(flowchart|graph)\b/m.test(src) && /^\s*%%\s*(constrain:|@layout)/m.test(src);
+  /^\s*(flowchart|graph)\b/m.test(src) && /^\s*%%\s*(constrain:|option:|@layout)/m.test(src);
+
+// Options are not constraints: `%% option: edges=routed|straight`. A fence with only an option line is still ours.
+export const edgeMode = v => /^(routed|orthogonal|on|true)$/i.test(v) ? 'routed' : /^(straight|off|false|none)$/i.test(v) ? 'straight' : null;
+const OPT = /^\s*%%\s*option:\s*(.+)$/i;
+export function parseOptions(src) {
+  const opts = {}, warnings = [];
+  src.split('\n').forEach((line, i) => { const m = line.match(OPT); if (!m) return;
+    m[1].trim().split(/\s+/).forEach(t => {
+      const kv = t.match(/^(\w+)=(.+)$/); if (!kv) { warnings.push(`line ${i + 1}: option "${t}" needs key=value`); return; }
+      if (kv[1] === 'edges') { const v = edgeMode(kv[2]); if (v) opts.edges = v; else warnings.push(`line ${i + 1}: edges must be routed or straight`); }
+      else warnings.push(`line ${i + 1}: unknown option "${kv[1]}"`); }); });
+  return { opts, warnings };
+}
+// Replace the option line for `key`, or insert one under the flowchart/graph header.
+export function setMermaidOption(src, key, value) {
+  const L = src.split('\n'), line = `  %% option: ${key}=${value}`, i = L.findIndex(l => OPT.test(l) && new RegExp('\\b' + key + '=').test(l));
+  if (i >= 0) L[i] = line; else L.splice(L.findIndex(l => /^\s*(flowchart|graph)\b/.test(l)) + 1, 0, line);
+  return L.join('\n');
+}
 
 export const stripLayout = src =>
   src.split('\n').filter(l => !PIN.test(l) && !l.trim().startsWith(MARK)).join('\n').replace(/\s+$/, '');

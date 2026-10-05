@@ -29,9 +29,9 @@ function node(n) {
   return s + '</g>';
 }
 
-export function drawSvg(g, { editable = false, theme = 'auto', margin = 24 } = {}) {
+export function drawSvg(g, { editable = false, theme = 'auto', margin = 24, origin = null } = {}) {   // origin: keep the top-left fixed (used while dragging)
   const L = g.list, m = margin, RP = (g.routes || []).filter(Boolean).flat();
-  const minX = Math.min(...L.map(i => i.px), ...RP.map(p => p[0])) - m, minY = Math.min(...L.map(i => i.py), ...RP.map(p => p[1])) - m;
+  const minX = origin ? origin[0] : Math.min(...L.map(i => i.px), ...RP.map(p => p[0])) - m, minY = origin ? origin[1] : Math.min(...L.map(i => i.py), ...RP.map(p => p[1])) - m;
   const W = Math.max(...L.map(i => i.px + i.pw), ...RP.map(p => p[0])) + m - minX, H = Math.max(...L.map(i => i.py + i.ph), ...RP.map(p => p[1])) + m - minY;
   const depth = i => i.parent ? 1 + depth(g.items[i.parent]) : 0;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" class="mk${editable ? ' mk-edit' : ''}" viewBox="${minX} ${minY} ${W} ${H}" width="${W}" height="${H}" style="max-width:none;display:block"><style>${css(theme)}</style>` +

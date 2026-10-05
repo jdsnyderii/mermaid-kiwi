@@ -13,6 +13,7 @@ They are separate features. They share the engine and nothing else. Do not let s
 | Fence | `mermaid` (flowchart/graph only) | `view <name>` |
 | Parser | Mermaid's own (`getDiagramFromText`), injected | our own small line-based view language (`view.js`) |
 | Constraints | `%% constrain: ...` comments | plain lines, no prefix |
+| Edge routing | `%% option: edges=routed\|straight` | `edges routed\|straight` |
 | Pins saved as | `%% @layout` marker + `%% constrain: pin` lines | `layout` line + `pin` lines |
 | Styles | fixed class names (`:::person` etc.) | `style <selector> k=v` cascade |
 | Needs Mermaid | yes (tested with 11.15.0) | no |
@@ -53,6 +54,9 @@ Graph items: leaf `{id, lines, style, w, h, parent?}`, boundary `{id, box:true, 
 8. **SVG is self-contained**: embedded `<style>`, CSS variables with fallbacks (`--mk-bg/--mk-fg/--mk-mut`), `theme: auto|light|dark`. It must work inline, in `<img>`, and saved to disk.
 9. **Output is deterministic** for the same input and versions.
 10a. **Arrowheads never sit on a bend.** `route.js` makes every edge leave and enter its shape along a straight lead-in (24px source / 32px target, shrinking to 10px when shapes are close), reserves those lanes for the edge, and tries other sides before falling back to a straight line. `test/headless.mjs` asserts the final segment is axis-aligned and at least 10px.
+10b. **Non-overlap is built in** (`layout.js`). Kiwi cannot state "must not overlap" (a disjunction), so `solveLayout` solves, finds shapes closer than 20px (shape/shape, shape/foreign boundary, boundary/boundary; a shape may sit inside its own boundaries), picks ONE separating side per pair from the geometry, adds it as a *required* constraint, and solves again (up to 8 rounds). Pins are only `strong`, so a dragged shape pushes others (and boundaries) out of the way instead of overlapping. Rules that keep it consistent: if a boundary around either shape is already too close to the other shape, only the boundary pair gets a rule (independent rules for the contents can contradict it); the chosen side is remembered in `g.ord` while the pair stays close (no flipping sides mid-drag); a rule that cannot be satisfied is dropped and the overlap is reported. On drop, shapes that were pushed are pinned where they ended up, so the saved layout reproduces what was on screen.
+10c. **Drag maths uses client-pixel deltas** divided by the scale at drag start, and the picture's top-left (`origin`) is frozen while dragging. Mapping the pointer through the live SVG transform feeds back when the picture's bounds change (e.g. dragging the top-most shape up) and makes shapes accelerate away from the pointer. Do not go back to that.
+10d. **Options live in the fence; the host option is only a default.** `edges` (routed|straight) is parsed by `parseOptions` (Mermaid, `%% option: key=value`, not a constraint) and `parseView` (view). `finish()` in `core.js` resolves it: fence value, else host `route`, else routed. Option lines are hand-written, so they are kept by write-back and included in the hashes. Unknown option keys/values produce warnings, not errors.
 10. **Dragging uses straight edges** (fast); routing runs on drop and on load. Changing spacing re-runs ELK and drops pins.
 11. **Constraints.** Defaults: user constraints `strong`, ELK stay-put `medium`, boundary shrink `weak`, containment and minimum title width `required`. Kiwi cannot express "no overlap"; `solveLayout` only warns about overlaps. Unknown ids and ops are warnings, not exceptions.
 
